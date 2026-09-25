@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0f1c">
+<title>发动机学院 · 汽油机四冲程互动小游戏</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ================= 首页 ================= -->
+<section id="screen-home" class="screen active">
+  <div class="home-bg">
+    <canvas id="home-engine"></canvas>
+    <div class="home-bg-mask"></div>
+  </div>
+  <div class="home-wrap">
+    <div class="home-hero">
+      <div class="badge">初中物理 · 热机与内燃机</div>
+      <h1 class="title">发动机学院<span class="title-sub">GASOLINE&nbsp;ENGINE&nbsp;ACADEMY</span></h1>
+      <p class="slogan">亲手点火、拆解、竞速 —— 在游戏中搞懂汽油机的四个冲程</p>
+    </div>
+
+    <div class="mode-grid">
+      <button class="mode-card" data-go="lab">
+        <span class="mode-emoji">🔬</span>
+        <span class="mode-name">自由实验室</span>
+        <span class="mode-desc">透视发动机内部，慢放/暂停/手摇飞轮，点击零件看讲解</span>
+        <span class="mode-tag">观察 · 理解</span>
+      </button>
+      <button class="mode-card" data-go="drive">
+        <span class="mode-emoji">🎮</span>
+        <span class="mode-name">驾驶挑战</span>
+        <span class="mode-desc">踩下油门，在最佳点火角按下点火键，60秒极速冲榜</span>
+        <span class="mode-tag">节奏 · 竞速</span>
+      </button>
+      <button class="mode-card" data-go="quiz">
+        <span class="mode-emoji">🎯</span>
+        <span class="mode-name">知识闯关</span>
+        <span class="mode-desc">六大关卡，冲程识别 / 排序 / 数据计算，三星通关</span>
+        <span class="mode-tag">答题 · 闯关</span>
+      </button>
+      <button class="mode-card" data-go="codex">
+        <span class="mode-emoji">📖</span>
+        <span class="mode-name">图鉴成就</span>
+        <span class="mode-desc">零件图鉴、汽油机VS柴油机对比表、成就墙</span>
+        <span class="mode-tag">收集 · 回顾</span>
+      </button>
+    </div>
+
+    <footer class="home-foot">
+      <span>💾 进度自动保存在本机</span>
+      <button id="btn-reset" class="link-btn">清空存档</button>
+    </footer>
+  </div>
+</section>
+
+<!-- ================= 自由实验室 ================= -->
+<section id="screen-lab" class="screen">
+  <header class="topbar">
+    <button class="btn-back" data-go="home">← 返回学院</button>
+    <h2>🔬 自由实验室</h2>
+    <div class="topbar-right" id="lab-hint">点击发动机上的零件可以查看讲解并解锁图鉴</div>
+  </header>
+
+  <div class="lab-layout">
+    <div class="lab-stage panel-glow">
+      <canvas id="lab-canvas" width="480" height="560"></canvas>
+      <div class="stroke-float" id="lab-stroke-float">吸气冲程</div>
+    </div>
+
+    <aside class="lab-side">
+      <div class="info-card">
+        <h3>当前状态</h3>
+        <div class="stroke-dots" id="lab-dots">
+          <span>吸气</span><span>压缩</span><span>做功</span><span>排气</span>
+        </div>
+        <ul class="state-list">
+          <li><b>进气门</b><em id="lab-intake">打开</em></li>
+          <li><b>排气门</b><em id="lab-exhaust">关闭</em></li>
+          <li><b>活塞</b><em id="lab-piston">向下 ↓</em></li>
+          <li><b>能量转化</b><em id="lab-energy">吸入混合气</em></li>
+        </ul>
+        <div class="cycle-line">已完成循环：<b id="lab-cycles">0</b> 次 · 曲轴转角 <b id="lab-angle">0°</b></div>
+      </div>
+
+      <div class="info-card">
+        <h3>控制台</h3>
+        <div class="ctl-row">
+          <button id="lab-play" class="ctl-btn primary">⏸ 暂停</button>
+          <button id="lab-step" class="ctl-btn">🎞 逐帧</button>
+        </div>
+        <div class="ctl-jump">
+          <button class="jump-btn" data-stroke="0">跳至吸气</button>
+          <button class="jump-btn" data-stroke="1">跳至压缩</button>
+          <button class="jump-btn" data-stroke="2">跳至做功</button>
+          <button class="jump-btn" data-stroke="3">跳至排气</button>
+        </div>
+        <label class="speed-label">转速
+          <input type="range" id="lab-speed" min="0.15" max="2" step="0.05" value="0.6">
+          <span id="lab-speed-val">0.6×</span>
+        </label>
+      </div>
+
+      <div class="info-card tip-card">
+        <h3>💡 观察要点</h3>
+        <p id="lab-tip">活塞向下运动，气缸内体积变大、压强变小，汽油和空气的混合物被吸入气缸。</p>
+      </div>
+    </aside>
+  </div>
+
+  <!-- 零件讲解弹卡 -->
+  <div class="part-modal hidden" id="part-modal">
+    <div class="part-modal-box">
+      <button class="part-close" id="part-close">✕</button>
+      <div class="part-emoji" id="part-emoji">⚙️</div>
+      <h3 id="part-name">零件名</h3>
+      <p id="part-desc"></p>
+      <div class="part-unlock" id="part-unlock">🔓 已收入图鉴</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 驾驶挑战 ================= -->
+<section id="screen-drive" class="screen">
+  <header class="topbar">
+    <button class="btn-back" data-go="home">← 返回学院</button>
+    <h2>🎮 驾驶挑战</h2>
+    <div class="topbar-right">在最佳点火角按下 <kbd>空格</kbd> 点火！</div>
+  </header>
+
+  <div class="drive-layout">
+    <div class="drive-road panel-glow">
+      <canvas id="drive-canvas"></canvas>
+      <div class="drive-hud">
+        <div class="hud-item"><span>得分</span><b id="dr-score">0</b></div>
+        <div class="hud-item"><span>距离</span><b id="dr-dist">0 m</b></div>
+        <div class="hud-item"><span>时间</span><b id="dr-time">60</b></div>
+        <div class="hud-item"><span>挡位</span><b id="dr-gear">D1</b></div>
+      </div>
+      <div class="judge-pop" id="dr-judge"></div>
+      <div class="drive-overlay" id="dr-overlay">
+        <div class="overlay-box">
+          <h3 id="dr-over-title">🔥 点火节奏挑战</h3>
+          <p id="dr-over-text">每个循环压缩冲程末期是最佳点火时机。<br>当标记进入<b style="color:#7CFF6B">绿色区域</b>时，立刻按下 <kbd>空格</kbd> 或点击「点火」按钮！<br>错过点火会损失转速，连续失误发动机还会过热。</p>
+          <div class="overlay-stat" id="dr-over-stat"></div>
+          <button class="big-btn" id="dr-start">开始挑战</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="drive-side">
+      <div class="drive-engine-box panel-glow">
+        <canvas id="drive-engine" width="360" height="300"></canvas>
+        <div class="timing-bar">
+          <div class="timing-track" id="dr-track">
+            <div class="zone-good-l"></div>
+            <div class="zone-perfect"></div>
+            <div class="zone-good-r"></div>
+            <div class="timing-marker" id="dr-marker"></div>
+          </div>
+          <div class="timing-cap"><span>压缩冲程中后段</span><span>🔥 最佳点火角（上止点前）</span><span>做功冲程开始</span></div>
+        </div>
+        <button class="big-btn fire-btn" id="dr-fire">🔥 点火 (空格)</button>
+      </div>
+      <div class="gauges">
+        <div class="gauge">
+          <label>转速 RPM</label>
+          <div class="gauge-bar"><i id="g-rpm"></i></div>
+          <b id="g-rpm-val">0</b>
+        </div>
+        <div class="gauge heat">
+          <label>发动机温度</label>
+          <div class="gauge-bar"><i id="g-heat"></i></div>
+          <b id="g-heat-val">冷机</b>
+        </div>
+        <div class="combo-box" id="dr-combo">连击 <b>×0</b></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 知识闯关 ================= -->
+<section id="screen-quiz" class="screen">
+  <header class="topbar">
+    <button class="btn-back" data-go="home">← 返回学院</button>
+    <h2>🎯 知识闯关</h2>
+    <div class="topbar-right">满分三星，答错可看解析</div>
+  </header>
+
+  <!-- 关卡地图 -->
+  <div class="quiz-map" id="quiz-map"></div>
+
+  <!-- 答题区 -->
+  <div class="quiz-play hidden" id="quiz-play">
+    <div class="quiz-head">
+      <button class="ctl-btn" id="q-quit">← 退出关卡</button>
+      <div class="quiz-progress"><i id="q-progress"></i></div>
+      <div class="quiz-lives">连击 <b id="q-combo">0</b></div>
+    </div>
+    <div class="quiz-stage panel-glow">
+      <div class="q-prompt" id="q-prompt"></div>
+      <div class="q-engine hidden" id="q-engine"><canvas id="q-canvas" width="360" height="300"></canvas></div>
+      <div class="q-options" id="q-options"></div>
+      <div class="q-explain hidden" id="q-explain"></div>
+      <button class="big-btn hidden" id="q-next">继续 →</button>
+    </div>
+  </div>
+
+  <!-- 结算 -->
+  <div class="quiz-result hidden" id="quiz-result">
+    <div class="overlay-box">
+      <h3 id="qr-title">关卡完成！</h3>
+      <div class="stars" id="qr-stars">⭐⭐⭐</div>
+      <p id="qr-text"></p>
+      <div class="result-btns">
+        <button class="ctl-btn" id="qr-retry">再来一次</button>
+        <button class="big-btn" id="qr-back">返回关卡列表</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 图鉴成就 ================= -->
+<section id="screen-codex" class="screen">
+  <header class="topbar">
+    <button class="btn-back" data-go="home">← 返回学院</button>
+    <h2>📖 图鉴 · 对比 · 成就</h2>
+    <div class="topbar-right">在实验室点击零件即可解锁图鉴</div>
+  </header>
+
+  <div class="codex-tabs">
+    <button class="tab active" data-tab="parts">🧩 零件图鉴</button>
+    <button class="tab" data-tab="compare">⚖️ 汽油机 VS 柴油机</button>
+    <button class="tab" data-tab="achieve">🏆 成就墙</button>
+  </div>
+
+  <div class="codex-pane active" id="pane-parts">
+    <div class="parts-grid" id="parts-grid"></div>
+  </div>
+
+  <div class="codex-pane" id="pane-compare">
+    <div class="compare-wrap panel-glow">
+      <table class="compare-table">
+        <thead><tr><th>对比项目</th><th>🛢 汽油机</th><th>🛢 柴油机</th></tr></thead>
+        <tbody>
+          <tr><td>顶部装置</td><td>火花塞</td><td>喷油嘴</td></tr>
+          <tr><td>吸入物质</td><td>汽油和空气的混合物</td><td>只有空气</td></tr>
+          <tr><td>点火方式</td><td>点燃式（火花塞电火花点燃）</td><td>压燃式（压缩空气升温，喷入柴油自燃）</td></tr>
+          <tr><td>压缩程度</td><td>压缩程度较小</td><td>压缩程度更大，气体温度更高</td></tr>
+          <tr><td>效率</td><td>较低</td><td>较高（更省油）</td></tr>
+          <tr><td>震动与噪音</td><td>较小、较轻便</td><td>较大、较笨重</td></tr>
+          <tr><td>常见用途</td><td>小汽车、摩托车、小型机械</td><td>卡车、拖拉机、轮船、大型机械</td></tr>
+        </tbody>
+      </table>
+      <p class="compare-note">🔑 共同点：一个工作循环都是 <b>4 个冲程</b>，活塞往复 <b>2 次</b>，曲轴转 <b>2 周</b>，对外做功 <b>1 次</b>；只有做功冲程靠燃气推动，其余三个冲程靠飞轮惯性完成。</p>
+    </div>
+  </div>
+
+  <div class="codex-pane" id="pane-achieve">
+    <div class="achieve-grid" id="achieve-grid"></div>
+  </div>
+</section>
+
+<!-- 成就弹出提示 -->
+<div class="ach-toast hidden" id="ach-toast">
+  <span class="ach-toast-emoji">🏆</span>
+  <div><b>成就解锁</b><em id="ach-toast-name"></em></div>
+</div>
+
+<script src="js/storage.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/lab.js"></script>
+<script src="js/drive.js"></script>
+<script src="js/quiz.js"></script>
+<script src="js/codex.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
